@@ -1,4 +1,4 @@
-import {count, gte, pipe, allPass, prop, equals, __, not} from 'ramda'
+import {count, gte, pipe, allPass, prop, equals, __, not, filter} from 'ramda'
 
 const white = 'white';
 const red = 'red';
@@ -51,7 +51,7 @@ const twoGreenColorFigure = pipe(getAllColors, countGreenColors, equals(__, 2));
 const oneRedColorFigure = pipe(getAllColors, countNColor(isRed), equals(__, 1));
 
 const getCountsColorsWithoutWhite = (args) => getAllColors(args).reduce((counts, element) => element !== white ? (counts[element] = (counts[element] || 0) + 1, counts) : counts, {});
-const isThreeFigureOneColor = (args) => gte(Math.max(Object.values(getCountsColorsWithoutWhite(args))), 3); 
+const isThreeFigureOneColor = (args) => gte(filter((x) => x >= 3, Object.values(getCountsColorsWithoutWhite(args))).length, 1); 
 
 // Валидаторы
 
