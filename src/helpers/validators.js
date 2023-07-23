@@ -1,50 +1,76 @@
-/**
- * @file Домашка по FP ч. 1
- *
- * Основная задача — написать самому, или найти в FP библиотеках функции anyPass/allPass
- * Эти функции/их аналоги есть и в ramda и в lodash
- *
- * allPass — принимает массив функций-предикатов, и возвращает функцию-предикат, которая
- * вернет true для заданного списка аргументов, если каждый из предоставленных предикатов
- * удовлетворяет этим аргументам (возвращает true)
- *
- * anyPass — то же самое, только удовлетворять значению может единственная функция-предикат из массива.
- *
- * Если какие либо функции написаны руками (без использования библиотек) это не является ошибкой
- */
+import {count, gte, pipe, allPass, prop, equals, __, not} from 'ramda'
 
-// 1. Красная звезда, зеленый квадрат, все остальные белые.
-export const validateFieldN1 = ({star, square, triangle, circle}) => {
-    if (triangle !== 'white' || circle !== 'white') {
-        return false;
-    }
+const white = 'white';
+const red = 'red';
+const green = 'green';
+const blue = 'blue';
+const orange = 'orange';
 
-    return star === 'red' && square === 'green';
-};
+const isWhite = equals(white);
+const isRed = equals(red);
+const isGreen = equals(green);
+const isBlue = equals(blue);
+const isOrange = equals(orange);
 
-// 2. Как минимум две фигуры зеленые.
-export const validateFieldN2 = () => false;
+const getStar = prop('star');
+const getSquare = prop('square');
+const getTriangle = prop('triangle');
+const getCircle = prop('circle');
 
-// 3. Количество красных фигур равно кол-ву синих.
-export const validateFieldN3 = () => false;
+const getRedStar = pipe(getStar, isRed);
+const getGreenSquare = pipe(getSquare, isGreen);
+const getWhiteTriangle = pipe(getTriangle, isWhite);
+const getWhiteCircle = pipe(getCircle, isWhite);
+const getWhiteStar = pipe(getStar, isWhite);
+const getBlueCircle = pipe(getCircle, isBlue);
+const getOrangeSquare = pipe(getSquare, isOrange);
+const getWhiteSquare = pipe(getSquare, isWhite);
+const getGreenTriangle = pipe(getTriangle, isGreen);
 
-// 4. Синий круг, красная звезда, оранжевый квадрат треугольник любого цвета
-export const validateFieldN4 = () => false;
+let notGetRedStar = pipe(getRedStar, not);
+let notGetWhiteStar = pipe(getWhiteStar, not);
+let notGetWhiteSquare = pipe(getWhiteSquare, not);
+let notGetWhiteTriangle = pipe(getWhiteTriangle, not);
 
-// 5. Три фигуры одного любого цвета кроме белого (четыре фигуры одного цвета – это тоже true).
-export const validateFieldN5 = () => false;
+const getAllColors = (...args) => Object.values(...args);
 
-// 6. Ровно две зеленые фигуры (одна из зелёных – это треугольник), плюс одна красная. Четвёртая оставшаяся любого доступного цвета, но не нарушающая первые два условия
-export const validateFieldN6 = () => false;
+const atLeastTwoFigure = gte(__, 2); 
+const atLeastFourFigure = gte(__, 4);
 
-// 7. Все фигуры оранжевые.
-export const validateFieldN7 = () => false;
+const countGreenColors = count(isGreen);
 
-// 8. Не красная и не белая звезда, остальные – любого цвета.
-export const validateFieldN8 = () => false;
+const countNColor = (color) => pipe(getAllColors, count(color));
 
-// 9. Все фигуры зеленые.
-export const validateFieldN9 = () => false;
+const allFiguresNColor = (color) => pipe(countNColor(color), atLeastFourFigure); 
 
-// 10. Треугольник и квадрат одного цвета (не белого), остальные – любого цвета
-export const validateFieldN10 = () => false;
+const redEqBlue = (colors) => count(isRed, colors) === count(isBlue, colors);
+
+const triangleEqSquare = (args) => getTriangle(args) === getSquare(args);
+
+const twoGreenColorFigure = pipe(getAllColors, countGreenColors, equals(__, 2));
+const oneRedColorFigure = pipe(getAllColors, countNColor(isRed), equals(__, 1));
+
+const getCountsColorsWithoutWhite = (args) => getAllColors(args).reduce((counts, element) => element !== white ? (counts[element] = (counts[element] || 0) + 1, counts) : counts, {});
+const isThreeFigureOneColor = (args) => gte(Math.max(Object.values(getCountsColorsWithoutWhite(args))), 3); 
+
+// Валидаторы
+
+export const validateFieldN1 = allPass([getRedStar, getGreenSquare, getWhiteTriangle, getWhiteCircle]);
+
+export const validateFieldN2 = pipe(getAllColors, countGreenColors, atLeastTwoFigure);
+
+export const validateFieldN3 = pipe(getAllColors, redEqBlue);
+
+export const validateFieldN4 = allPass([getBlueCircle, getRedStar, getOrangeSquare]);
+
+export const validateFieldN5 = allPass([isThreeFigureOneColor]);
+
+export const validateFieldN6 = allPass([getGreenTriangle, twoGreenColorFigure, oneRedColorFigure]);
+
+export const validateFieldN7 = allFiguresNColor(isOrange);
+
+export const validateFieldN8 = allPass([notGetRedStar, notGetWhiteStar]);
+
+export const validateFieldN9 = allFiguresNColor(isGreen);
+
+export const validateFieldN10 = allPass([triangleEqSquare, notGetWhiteSquare, notGetWhiteTriangle]);
