@@ -1,51 +1,70 @@
-/**
- * @file Домашка по FP ч. 2
- *
- * Подсказки:
- * Метод get у инстанса Api – каррированый
- * GET / https://animals.tech/{id}
- *
- * GET / https://api.tech/numbers/base
- * params:
- * – number [Int] – число
- * – from [Int] – из какой системы счисления
- * – to [Int] – в какую систему счисления
- *
- * Иногда промисы от API будут приходить в состояние rejected, (прямо как и API в реальной жизни)
- * Ответ будет приходить в поле {result}
- */
- import Api from '../tools/api';
+import {gt, allPass, test, pipe, partial, ifElse, prop, otherwise} from 'ramda'
 
- const api = new Api();
+import Api from '../tools/api';
 
- /**
-  * Я – пример, удали меня
-  */
- const wait = time => new Promise(resolve => {
-     setTimeout(resolve, time);
- })
+const api = new Api();
 
- const processSequence = ({value, writeLog, handleSuccess, handleError}) => {
-     /**
-      * Я – пример, удали меня
-      */
-     writeLog(value);
+const urlNumbersApi = 'https://api.tech/numbers/base'
+const urlAnimalsApi = 'https://animals.tech/'
+const validationMessage = 'ValidationError'
 
-     api.get('https://api.tech/numbers/base', {from: 2, to: 10, number: '01011010101'}).then(({result}) => {
-         writeLog(result);
-     });
+const moreThenTwoNumbers = (value) => gt(value.length, 2)
+const lessThenThreeNumbers = (value) => gt(10, value.length)
+const isNumber = test(/^[0-9]+(\.[0-9]+)?$/)
 
-     wait(2500).then(() => {
-         writeLog('SecondLog')
+const asyncThen = (fn, p) => fn.then(x => p(x));
 
-         return wait(1500);
-     }).then(() => {
-         writeLog('ThirdLog');
+const numberAndRoundString = pipe(Number, Math.round)
+const translateResInString = pipe(prop('result'), String);
+const getLengthString = (args) => args.length;
+const getSquareNumber = (args) => args ** 2
+const getRemainderDivisionThreeNumber = (args) => args % 3;
+const getTransformUrl = (args) => urlAnimalsApi + args
+const getAnimal = (args) => api.get(args, {})
 
-         return wait(400);
-     }).then(() => {
-         handleSuccess('Done');
-     });
- }
+const getResultFromRes = (args) => asyncThen(args, translateResInString);
+const getLengthFromRes = (args) => asyncThen(args, getLengthString);
+const getSquareFromRes = (args) => asyncThen(args, getSquareNumber)
+const getRemainderDivisionThreeFromRes = (args) => asyncThen(args, getRemainderDivisionThreeNumber)
+const getTransformUrlFromRes = (args) => asyncThen(args, getTransformUrl)
+const getAnimalFromRes = (args) => asyncThen(args, getAnimal)
+
+const translateNumberFromTenInTwo = (value) => api.get(urlNumbersApi, {from: 10, to: 2, number: value})
+
+const validateInputString = allPass([moreThenTwoNumbers, lessThenThreeNumbers, isNumber])
+
+const processSequence = ({value, writeLog, handleSuccess, handleError}) => {
+  const curVal = (value) => (writeLog(value), value);
+  const asyncCurValThen = (fn) => fn.then((x) => curVal(x));
+  const getHandleSuccess = (args) => asyncThen(args, handleSuccess)
+  const getHandleError = otherwise(handleError)
+
+  const handleValidateError = partial(handleError, [validationMessage]);
+
+  const bodyProcess = pipe(
+    numberAndRoundString,
+    curVal,
+    translateNumberFromTenInTwo,
+    getResultFromRes,
+    asyncCurValThen,
+    getLengthFromRes,
+    asyncCurValThen,
+    getSquareFromRes,
+    asyncCurValThen,
+    getRemainderDivisionThreeFromRes,
+    asyncCurValThen,
+    getTransformUrlFromRes,
+    getAnimalFromRes,
+    getResultFromRes,
+    getHandleSuccess,
+    getHandleError
+  )
+
+  const checkInputStringBefore = ifElse(validateInputString, bodyProcess, handleValidateError)
+    
+  const run = pipe(curVal, checkInputStringBefore)
+     
+  run(value)
+}
 
 export default processSequence;
